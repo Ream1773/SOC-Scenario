@@ -3,6 +3,7 @@ from time import sleep
 import os
 from zipfile import ZipFile
 import re
+import shutil
 #import sys
 
 
@@ -49,9 +50,23 @@ class EPScenario:
     def _dump_setup(self):
         os.mkdir(self.baseDir+"ProcDump") # make procdump dir on desktop
         os.mkdir(self.baseDir+"Dump")
-        full_path = self.baseDir+"ProcDump" # join base_dir with new procdump folder
+        full_path = self.baseDir+"ProcDump" # join path 2 desktop with new procdump folder
         
         return full_path
+    
+    def _check_cleaned(self):
+        # make method to check if the dump file still exists ; return boolean based value
+        shutil.rmtree(f"{self.baseDir}\\Dump", ignore_errors=True)
+        shutil.rmtree(f"{self.baseDir}\\ProcDump", ignore_errors=True)
+        shutil.rmtree(f"{self.baseDir}\\Procdump.zip", ignore_errors=True)
+        
+        rm_output = str(sp.check_output([self.PS, "-Command", f"ls {self.baseDir}"]))
+        match = re.search("Dump", rm_output)
+
+        if match:
+            return True
+        else:
+            return False
     
     def dump_lsass(self):
         path = self._dump_setup() # base_dir\\ProcDump
@@ -70,18 +85,17 @@ class EPScenario:
             print("Initialized ProcDump in Dump directory!\n")
             print(f"Lsass.dmp created at: {self.baseDir}\\Dump..\nStarting cleanup.....\n")
             
-            os.rmdir(f"{self.baseDir}\\Dump")
-            os.rmdir(f"{self.baseDir}\\ProcDump")
-            os.rmdir(f"{self.baseDir}\\Procdump.zip")
+            sleep(3)
 
-            rm_output = sp.check_output([self.PS, "-Command", f"ls {self.baseDir}"])
-            match = re.search(r"\bdump\b", rm_output)
-            if match:
-                print("Cleaning done!\n")
+            if self._check_cleaned():
+                    print("Cleaning done!\n")
             else:
                 print("Cleaning files failed!\n")
         except PermissionError as e:
-            print("Execution failed.\n")
+            print("Execution failed.\nCleaning up..\n")
+            if self._check_cleaned():
+                print("Cleaned.\n")
+                os.system(f"dir {self.baseDir}")
 
 
         # Use procdump (sysInternals) to dump lsass.exe

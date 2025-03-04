@@ -1,21 +1,40 @@
 import os
-import subprocess
+import subprocess as sp
 from subprocess import DEVNULL
 from zipfile import ZipFile
+import re
+import shutil
+
 
 PS = os.path.expandvars(r"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe")
 dir = r"C:\\Users\\raham\\OneDrive\\Desktop\\"
-proc_file = "Procdump.zip"
-os.mkdir(dir+"ProcDump")
-full_path = dir+"ProcDump"
+#proc_file = "Procdump.zip"
+#os.mkdir(dir+"ProcDump")
+#full_path = dir+"ProcDump"
 
-def get_procdump():
-    subprocess.call([PS, "-Command", f"Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile {dir}Procdump.zip"] ,shell=True, text=True)
-    joined_path = dir+proc_file
-    with ZipFile(joined_path, "r") as procObject:
-        procObject.extractall(path=full_path)
+# def get_procdump():
+#     sp.call([PS, "-Command", f"Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile {dir}Procdump.zip"] ,shell=True, text=True)
+#     joined_path = dir+proc_file
+#     with ZipFile(joined_path, "r") as procObject:
+#         procObject.extractall(path=full_path)
+    
 
-get_procdump()
+
+#get_procdump()
+
+def test_func():
+
+    rm_output = str(sp.check_output([PS, "-Command", f"ls {dir}"]))
+    match_re = re.findall("Dump", rm_output)
+    
+    if str(match_re):
+        print("Found!\nCleaning up...\n")
+        shutil.rmtree(f"{dir}Dump")
+
+    else:
+        print("Not found.\n")
+
+test_func()
 # try:
 #     user = subprocess.check_output([PS, "-Command", "whoami"], text=True)
 #     new = user.split('\\')
