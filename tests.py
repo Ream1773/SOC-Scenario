@@ -7,7 +7,8 @@ import shutil
 
 
 PS = os.path.expandvars(r"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe")
-dir = r"C:\\Users\\raham\\OneDrive\\Desktop\\"
+#dir = r"C:\\Users\\raham\\OneDrive\\Desktop\\"
+dir = r"C:\\Users\\Administrator\\Desktop\\"
 #proc_file = "Procdump.zip"
 #os.mkdir(dir+"ProcDump")
 #full_path = dir+"ProcDump"
@@ -34,7 +35,7 @@ def test_func():
     else:
         print("Not found.\n")
 
-test_func()
+#test_func()
 # try:
 #     user = subprocess.check_output([PS, "-Command", "whoami"], text=True)
 #     new = user.split('\\')
@@ -63,3 +64,4 @@ CMD = os.path.expandvars(r"%SystemRoot%\system32\cmd.exe")
 #         print("Command ran successfully.\n")
 
 
+os.remove(f"{dir}Procdump.zip")
