@@ -3,6 +3,7 @@ SOC - Scenario
 Active Directory (AD-Scenario) & Endpoint (EP-Scenario)
 
 These scripts are made for testing a SOC managed environment by implementing malicious behavior
+
 	For Active Directory:
 		- Creates a user and adds them to the "Domain Admins" group
 		- Deletes the user from the domain
