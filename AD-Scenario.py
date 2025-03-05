@@ -34,7 +34,7 @@ class ADScenario:
 
     def win_event_gen(self):
         '''
-            Makes user and adds to domain group -> deletes after
+            Makes user and adds to domain group -> then deletes
         '''
 
         domain = subprocess.check_output(["powershell", "-Command", "(Get-WmiObject Win32_ComputerSystem).Domain"]).decode().strip()
