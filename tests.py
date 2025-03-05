@@ -1,3 +1,4 @@
+# Test files before adding to working script
 import os
 import subprocess as sp
 from subprocess import DEVNULL
@@ -7,4 +8,4 @@ import shutil
 
 
 PS = os.path.expandvars(r"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe")
-os.path.expandvars(r"%USERPROFILE%\Desktop\\")
+dir = os.path.expandvars(r"%USERPROFILE%\Desktop\\")

