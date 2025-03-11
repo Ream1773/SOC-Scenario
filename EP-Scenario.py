@@ -274,7 +274,7 @@ class EPScenario:
             print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Files were deleted successfully!\n")
         
 
-    def surf_limits(self):
+    def web_filters(self):
         '''Open various restricted websites to check security solutions'''
 
         chrome_path = r"C:/Program Files/Google/Chrome/Application/chrome.exe"
@@ -318,5 +318,6 @@ if __name__ == '__main__':
 
     EP_obj.make_Eicar()
     EP_obj.dump_lsass()
-    EP_obj.surf_limits()
+    EP_obj.web_filters()
     EP_obj.download_tools()
+    EP_obj.cs_alerts()
