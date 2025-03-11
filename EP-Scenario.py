@@ -10,11 +10,11 @@ from colorama import Fore
 from colorama import Style
 import webbrowser
 
-# Initialize Colors
-colorama_init()
 
-# Check if user running is NT/AUTHORITY | Administrator
-def is_admin():
+colorama_init() # Initialize Colors
+
+
+def is_admin(): # Necessary Check to see if user running is NT/AUTHORITY || Administrator
     '''Returns True if script is running with administrator privileges'''
 
     try:
@@ -37,7 +37,7 @@ def run_as_admin():
     
     sys.exit()
 
-# Check if user is running script as admin
+
 if not is_admin(): 
     print(f"{Fore.RED}[!]{Style.RESET_ALL} Relaunching as {Fore.RED}Admin{Style.RESET_ALL}...\n")
     run_as_admin()
@@ -52,13 +52,14 @@ class EPScenario:
         self.powersploit = r"https://github.com/PowerShellMafia/PowerSploit/archive/refs/heads/master.zip"
         self.mimikatz = r"https://github.com/ParrotSec/mimikatz/archive/refs/heads/master.zip"
     
+
     def make_Eicar(self):
         '''Generate EICAR file on user Desktop'''
 
         eicar_file = os.path.join(f"{self.path}", "EICAR.txt")
         try:
 
-            os.chdir(f"{self.path}")
+            os.chdir(f"{self.path}") # Possibly reduant line of code 
 
             with open(eicar_file, "w") as f:
                 f.write(r"X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
@@ -157,6 +158,7 @@ class EPScenario:
         '''Cleaup method to ensure all tools downloaded were removed succssfully. - mimikatz, Powersploit'''
 
         files_to_delete = [os.path.join(self.path, f) for f in os.listdir(self.path) if any(sub in f.lower() for sub in ["mimikatz", "powersploit", "master"])]
+        # Put all relevant files into a list for easy iteration
 
         if not files_to_delete:
             print(f"{Fore.RED}[-]{Style.RESET_ALL} No files to delete!\n")
@@ -177,7 +179,7 @@ class EPScenario:
                         print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Deleted directory: {file}\n")
                         sf_dir = True
 
-                    elif os.path.isfile(file): # Check if objet is file
+                    elif os.path.isfile(file): # Check if object is file
                         os.remove(file)  # Delete file
                         print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Deleted file: {file}\n")
                         sf_file = True
@@ -263,6 +265,7 @@ class EPScenario:
         try:
             with ZipFile(powersploit_zip_path, "r") as powerSObject:
                 powerSObject.extractall(path=paths[1])
+                # Might need to run powerspoit in order for EDR to catch it
 
         except OSError as e:
             print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Powersploit was blocked by the security solution.\n")
@@ -277,6 +280,7 @@ class EPScenario:
         chrome_path = r"C:/Program Files/Google/Chrome/Application/chrome.exe"
         webbrowser.register('chrome', None,  
                     webbrowser.BackgroundBrowser(chrome_path))
+        # For now the URL's will be hardcoded
         urls = ["https://google.com","https://youtube.com","https://x.com","https://hackthebox.com","https://facebook.com"]
         
         for url in urls:
@@ -311,6 +315,7 @@ if __name__ == '__main__':
     desktop_path = get_desktop_path()
 
     EP_obj = EPScenario(ps=PS, path=desktop_path)
+
     EP_obj.make_Eicar()
     EP_obj.dump_lsass()
     EP_obj.surf_limits()

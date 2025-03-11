@@ -121,7 +121,7 @@ class ADScenario:
 
     def create_scheduled_task(self):
         '''Creates a Windows scheduled task to run Calculator.'''
-
+        # Implement scheduled task via PS commands
         cmd = f"""
 $TaskName = "{self.TASK_NAME}"
 $TaskAction = New-ScheduledTaskAction -Execute "{self.NOTEPAD_PATH}"
@@ -143,6 +143,7 @@ Register-ScheduledTask -TaskName $TaskName -InputObject $Task -Force
 
     def delete_scheduled_task(self):
         '''Deletes the scheduled task after user confirmation.'''
+        # Deletes the task according to user input
         sleep(4)
         while True:
             choice = input(f"{Fore.RED}[-]{Style.RESET_ALL} Delete scheduled task? (y/n): \n").strip().lower()
@@ -160,7 +161,9 @@ Register-ScheduledTask -TaskName $TaskName -InputObject $Task -Force
 if __name__ == '__main__':
 
     PS = os.path.expandvars(r"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe")
+
     AD_obj = ADScenario(PS=PS)
+    
     AD_obj.win_event_gen()
     AD_obj.create_scheduled_task()
     AD_obj.delete_scheduled_task()
