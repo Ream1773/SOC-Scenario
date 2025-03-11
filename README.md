@@ -15,3 +15,9 @@ These scripts are made for testing a SOC managed environment by implementing mal
 		- Downloads ProcDump from the SysInternals Suite to generate an lsass dump
 		- Downloads two infamously malicious tools: Mimikatz & PowerSploit
 		- Opens browser to browse to organization-taboo websites (e.g gambling, malware, pornography)
+
+Covert to windows PE via: PyInstaller - [python.exe pip install pyinstaller]
+
+Example:
+
+python.exe -m PyInstaller --onefile --clean --hidden-import=colorama --hidden-import=ctypes --hidden-import=webbrowser --hidden-import=zipfile --hidden-import=shutil --name=<Final Executable Name> <Python File Name>

@@ -170,5 +170,10 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-dist/
-build/
+/dist/
+/build/
+
+tests.py
+proj-notes.txt
+EPScenario.exe
+EPScenario.spec

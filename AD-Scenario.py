@@ -50,8 +50,8 @@ print(f"{Fore.LIGHTGREEN_EX}[*]{Style.RESET_ALL} Running with {Fore.RED}Administ
 class ADScenario:
     def __init__(self, PS):
         self.PS = PS
-        self.TASK_NAME = "CalcSimulationTask"
-        self.CALC_PATH = r"C:\Windows\System32\\calc.exe"
+        self.TASK_NAME = "TestTask"
+        self.NOTEPAD_PATH = r"C:\Windows\System32\\notepad.exe"
     
     
     def _check_AD_module(self):
@@ -122,21 +122,21 @@ class ADScenario:
     def create_scheduled_task(self):
         '''Creates a Windows scheduled task to run Calculator.'''
 
-        cmd = [
-            "schtasks", "/create",
-            "/tn", self.TASK_NAME,
-            "/tr", self.CALC_PATH,
-            "/sc", "once",
-            "/st", (time.strftime("%H:%M:%S", time.localtime(time.time() + 30))),  # Runs in 30 seconds
-            "/rl", "highest",
-            "/f"
-        ]
+        cmd = f"""
+$TaskName = "{self.TASK_NAME}"
+$TaskAction = New-ScheduledTaskAction -Execute "{self.NOTEPAD_PATH}"
+$TaskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
+$TaskPrincipal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
+$TaskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+$Task = New-ScheduledTask -Action $TaskAction -Trigger $TaskTrigger -Principal $TaskPrincipal -Settings $TaskSettings
+Register-ScheduledTask -TaskName $TaskName -InputObject $Task -Force
+""" 
     
-        result = sp.run(cmd, capture_output=True, text=True)
+        result = sp.run([self.PS, "-Command", cmd], capture_output=True, text=True)
         
-        if "SUCCESS" in result.stdout:
+        if "Ready" in result.stdout:
             print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Scheduled task created successfully.\n")
-            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Task runs in 30 seconds...\n")
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Task runs in 1 minute...\n")
         else:
             print(f"{Fore.RED}[-]{Style.RESET_ALL} Failed to create task:", result.stderr)
 
@@ -147,7 +147,7 @@ class ADScenario:
         while True:
             choice = input(f"{Fore.RED}[-]{Style.RESET_ALL} Delete scheduled task? (y/n): \n").strip().lower()
             if choice == "y":
-                sp.run(["schtasks", "/delete", "/tn", self.TASK_NAME, "/f"], capture_output=True, text=True)
+                sp.run([self.PS, "-Command", f'Unregister-ScheduledTask -TaskName "{self.TASK_NAME}" -Confirm:$false'], capture_output=True, text=True)
                 print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Task deleted.\n")
                 break
             elif choice == "n":
@@ -161,6 +161,6 @@ if __name__ == '__main__':
 
     PS = os.path.expandvars(r"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe")
     AD_obj = ADScenario(PS=PS)
-    #AD_obj.win_event_gen()
+    AD_obj.win_event_gen()
     AD_obj.create_scheduled_task()
     AD_obj.delete_scheduled_task()
