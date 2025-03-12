@@ -1,8 +1,8 @@
-SOC - Scenario
+# SOC - Scenario
 
-Active Directory (AD-Scenario) & Endpoint (EP-Scenario)
+### Active Directory (AD-Scenario) & Endpoint (EP-Scenario)
 
-These scripts are made for testing a SOC managed environment by implementing malicious behavior
+#### These scripts are made for testing a SOC managed environment by implementing malicious behavior
 
 	For Active Directory:
 		- Creates a user and adds them to the "Domain Admins" group
@@ -16,8 +16,8 @@ These scripts are made for testing a SOC managed environment by implementing mal
 		- Downloads two infamously malicious tools: Mimikatz & PowerSploit
 		- Opens browser to browse to organization-taboo websites (e.g gambling, malware, pornography)
 
-Covert to windows PE via: PyInstaller - [python.exe pip install pyinstaller]
+#### Covert to windows PE via: PyInstaller - [python.exe pip install pyinstaller]
 
-Example:
+##### Example:
 
 `python.exe -m PyInstaller --onefile --clean --hidden-import=colorama --hidden-import=ctypes --hidden-import=webbrowser --hidden-import=zipfile --hidden-import=shutil --name=[Final Executable Name] [Python File Name]`
