@@ -20,4 +20,4 @@
 
 ##### Example:
 
-`python.exe -m PyInstaller --onefile --clean --hidden-import=colorama --hidden-import=ctypes --hidden-import=webbrowser --hidden-import=zipfile --hidden-import=shutil --name=[Final Executable Name] [Python File Name]`
+`python.exe -m PyInstaller --onefile --clean --name=[Final Executable Name] main.py`
