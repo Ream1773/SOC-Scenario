@@ -11,46 +11,13 @@ from colorama import Style
 import webbrowser
 
 
-colorama_init() # Initialize Colors
-
-
-def is_admin(): # Necessary Check to see if user running is NT/AUTHORITY || Administrator
-    '''Returns True if script is running with administrator privileges'''
-
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
-
-def run_as_admin():
-    '''Relaunch the script with admin privileges and keep the output visible'''
-
-    script = os.path.abspath(sys.argv[0])  # Get absolute path of the script
-    params = " ".join([f'"{arg}"' for arg in sys.argv[1:]])  # Properly format arguments
-    python_exe = sys.executable  # Gets the correct Python interpreter
-
-    # Relaunch using cmd.exe so the window stays open
-    cmd = f'start cmd /k "{python_exe} \"{script}\" {params}"'
-    
-    # Use ShellExecute to elevate privileges
-    ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", f"/c {cmd}", None, 1)
-    
-    sys.exit()
-
-
-if not is_admin(): 
-    print(f"{Fore.RED}[!]{Style.RESET_ALL} Relaunching as {Fore.RED}Admin{Style.RESET_ALL}...\n")
-    run_as_admin()
-
-print(f"{Fore.LIGHTGREEN_EX}[*]{Style.RESET_ALL} Running with {Fore.RED}Administrator{Style.RESET_ALL} privileges...\n")
-
-
 class EPScenario:
     def __init__(self, ps, path):
         self.PS = ps
         self.path = path
         self.powersploit = r"https://github.com/PowerShellMafia/PowerSploit/archive/refs/heads/master.zip"
         self.mimikatz = r"https://github.com/ParrotSec/mimikatz/archive/refs/heads/master.zip"
+        colorama_init() # Initialize colorset
     
 
     def make_Eicar(self):
@@ -196,7 +163,7 @@ class EPScenario:
         extraction_path = self._dump_setup()
 
         # Download Procdump
-        sp.run([PS, "-Command", f"""Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile {self.path}Procdump.zip"""] ,shell=True, text=True)
+        sp.run([self.PS, "-Command", f"""Invoke-WebRequest https://download.sysinternals.com/files/Procdump.zip -OutFile {self.path}Procdump.zip"""] ,shell=True, text=True)
         zip_path = os.path.join(self.path, "Procdump.zip")
 
         # Unzip file
@@ -243,8 +210,8 @@ class EPScenario:
         paths = self._tools_setup()
 
         try:
-            sp.run([PS, "-Command", f"""Invoke-WebRequest {self.mimikatz} -OutFile {self.path}{mimikatz_zip}"""] ,shell=True, text=True)
-            sp.run([PS, "-Command",f"""Invoke-WebRequest {self.powersploit} -OutFile {self.path}{powersploit_zip}"""] ,shell=True, text=True)
+            sp.run([self.PS, "-Command", f"""Invoke-WebRequest {self.mimikatz} -OutFile {self.path}{mimikatz_zip}"""] ,shell=True, text=True)
+            sp.run([self.PS, "-Command",f"""Invoke-WebRequest {self.powersploit} -OutFile {self.path}{powersploit_zip}"""] ,shell=True, text=True)
 
         except PermissionError as e: # Ignore error output
             print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Downloading tools....\n")
@@ -284,40 +251,4 @@ class EPScenario:
         urls = ["https://google.com","https://youtube.com","https://x.com","https://hackthebox.com","https://facebook.com"]
         
         for url in urls:
-            webbrowser.get('chrome').open_new_tab(url) 
-
-
-if __name__ == '__main__':
-
-    PS = os.path.expandvars(r"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe")
-    
-    def get_desktop_path():
-        '''Get absloute Desktop path'''
-
-        # Check OneDrive first
-        if "ONEDRIVE" in os.environ:
-            desktop_path = os.path.join(os.environ["ONEDRIVE"], "Desktop")
-        else:
-            desktop_path = os.path.join(os.environ["USERPROFILE"], "Desktop")
-        
-        # Validate the path
-        if os.path.exists(desktop_path):
-            return desktop_path
-        else:
-            print(f"{Fore.RED}[-]{Style.RESET_ALL} Detected desktop path does not exist: {desktop_path}\n")
-            while True:
-                user_input = input(f"{Fore.LIGHTBLUE_EX}[*]{Style.RESET_ALL}Enter the correct Desktop path manually: \n").strip()
-                if os.path.exists(user_input):
-                    return user_input
-                else:
-                    print(f"{Fore.RED}[-]{Style.RESET_ALL} The entered path does not exist. Please try again.")
-    
-    desktop_path = get_desktop_path()
-
-    EP_obj = EPScenario(ps=PS, path=desktop_path)
-
-    EP_obj.make_Eicar()
-    EP_obj.dump_lsass()
-    EP_obj.web_filters()
-    EP_obj.download_tools()
-    EP_obj.cs_alerts()
+            webbrowser.get('chrome').open_new_tab(url)

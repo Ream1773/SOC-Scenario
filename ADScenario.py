@@ -1,50 +1,11 @@
 import os
 import subprocess as sp
 from time import sleep
-import time
-import sys
 import re
-import ctypes
+import sys
 from colorama import init as colorama_init
 from colorama import Fore
 from colorama import Style
-
-
-colorama_init() # Initialize colors
-
-# Initialize Colors
-colorama_init()
-
-# Check if user running is NT/AUTHORITY | Administrator
-def is_admin():
-    '''Returns True if script is running with administrator privileges.'''
-
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
-
-def run_as_admin():
-    '''Relaunch the script with admin privileges and keep the output visible'''
-
-    script = os.path.abspath(sys.argv[0])  # Get absolute path of the script
-    params = " ".join([f'"{arg}"' for arg in sys.argv[1:]])  # Properly format arguments
-    python_exe = sys.executable  # Gets the correct Python interpreter
-
-    # Relaunch using cmd.exe so the window stays open
-    cmd = f'start cmd /k "{python_exe} \"{script}\" {params}"'
-    
-    # Use ShellExecute to elevate privileges
-    ctypes.windll.shell32.ShellExecuteW(None, "runas", "cmd.exe", f"/c {cmd}", None, 1)
-    
-    sys.exit()
-
-# Check if user is running script as admin
-if not is_admin(): 
-    print(f"{Fore.RED}[!]{Style.RESET_ALL} Relaunching as {Fore.RED}Admin{Style.RESET_ALL}...\n")
-    run_as_admin()
-
-print(f"{Fore.LIGHTGREEN_EX}[*]{Style.RESET_ALL} Running with {Fore.RED}Administrator{Style.RESET_ALL} privileges...\n")
 
 
 class ADScenario:
@@ -52,7 +13,7 @@ class ADScenario:
         self.PS = PS
         self.TASK_NAME = "TestTask"
         self.NOTEPAD_PATH = r"C:\Windows\System32\\notepad.exe"
-    
+        colorama_init()
     
     def _check_AD_module(self):
         '''Check whether the ActiveDirectory Module is installed & installs if it isn't.'''
@@ -75,7 +36,7 @@ class ADScenario:
             sys.exit(0)
 
 
-    def win_event_gen(self):
+    def priv_esc(self):
         '''Makes user and adds to domain group -> then deletes'''
 
         domain = sp.check_output(["powershell", "-Command", "(Get-WmiObject Win32_ComputerSystem).Domain"]).decode().strip()
@@ -123,14 +84,14 @@ class ADScenario:
         '''Creates a Windows scheduled task to run Calculator.'''
         # Implement scheduled task via PS commands
         cmd = f"""
-$TaskName = "{self.TASK_NAME}"
-$TaskAction = New-ScheduledTaskAction -Execute "{self.NOTEPAD_PATH}"
-$TaskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
-$TaskPrincipal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
-$TaskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-$Task = New-ScheduledTask -Action $TaskAction -Trigger $TaskTrigger -Principal $TaskPrincipal -Settings $TaskSettings
-Register-ScheduledTask -TaskName $TaskName -InputObject $Task -Force
-""" 
+        $TaskName = "{self.TASK_NAME}"
+        $TaskAction = New-ScheduledTaskAction -Execute "{self.NOTEPAD_PATH}"
+        $TaskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
+        $TaskPrincipal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
+        $TaskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+        $Task = New-ScheduledTask -Action $TaskAction -Trigger $TaskTrigger -Principal $TaskPrincipal -Settings $TaskSettings
+        Register-ScheduledTask -TaskName $TaskName -InputObject $Task -Force
+        """ 
     
         result = sp.run([self.PS, "-Command", cmd], capture_output=True, text=True)
         
@@ -143,15 +104,15 @@ Register-ScheduledTask -TaskName $TaskName -InputObject $Task -Force
 
     def delete_scheduled_task(self):
         '''Deletes the scheduled task after user confirmation.'''
-        # Deletes the task according to user input
+
         sleep(4)
         while True:
-            choice = input(f"{Fore.RED}[-]{Style.RESET_ALL} Delete scheduled task? (y/n): \n").strip().lower()
-            if choice == "y":
+            choice = input(f"{Fore.RED}[-]{Style.RESET_ALL} Delete scheduled task? (y/n): \n").strip().lower() # Deletes the task according to user input
+            if choice.lower() == "y":
                 sp.run([self.PS, "-Command", f'Unregister-ScheduledTask -TaskName "{self.TASK_NAME}" -Confirm:$false'], capture_output=True, text=True)
                 print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Task deleted.\n")
                 break
-            elif choice == "n":
+            elif choice.lower() == "n":
                 print(f"{Fore.RED}[-]{Style.RESET_ALL} Task not deleted.\n")
                 break
             else:
@@ -164,6 +125,6 @@ if __name__ == '__main__':
 
     AD_obj = ADScenario(PS=PS)
     
-    AD_obj.win_event_gen()
+    AD_obj.priv_esc()
     AD_obj.create_scheduled_task()
     AD_obj.delete_scheduled_task()
