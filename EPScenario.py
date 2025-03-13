@@ -24,9 +24,8 @@ class EPScenario:
         '''Generate EICAR file on user Desktop'''
 
         eicar_file = os.path.join(f"{self.path}", "EICAR.txt")
-        try:
 
-            os.chdir(f"{self.path}") # Possibly reduant line of code 
+        try:
 
             with open(eicar_file, "w") as f:
                 f.write(r"X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
@@ -66,14 +65,16 @@ class EPScenario:
 
         for cmd in commands:
             try:
-                print(f"\n{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Running: {cmd}\n ")
+                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Running: {cmd}\n ")
                 result = sp.run(cmd, shell=True, capture_output=True, text=True)
 
                 if result.stdout:
                     print(result.stdout)
+                    sleep(2.5)
 
             except FileNotFoundError as e:
                 print(f"{Fore.RED}[-]{Style.RESET_ALL} Command not found.\n{cmd}\n")
+
 
     def _dump_setup(self):
         '''Make relevant directories for easier cleanup'''
@@ -131,7 +132,7 @@ class EPScenario:
             print(f"{Fore.RED}[-]{Style.RESET_ALL} No files to delete!\n")
             return False
         
-        # Flags for proof of deletion
+        # Flags for deletion validation
 
         sf_file = False 
         sf_dir = False
@@ -156,7 +157,50 @@ class EPScenario:
         else:
             return True
         
-    
+
+    def remove_logs(self):
+        '''Removes log directory and or files according to input'''
+
+        files_to_delete = [os.path.join(self.path, f) for f in os.listdir(self.path) if "log" in f.lower()]
+
+        while True:
+            user_input = input("Delete Logs dir? y/n:\n")
+
+            if user_input.lower() == "y":
+                
+                # Flags for deletion validation
+
+                sf_file = False 
+                sf_dir = False
+
+                # Delete files and directories separately
+                while not sf_dir and not sf_file:
+                    for file in files_to_delete:
+                        try:
+                            if os.path.isdir(file): # Check if object is a directory
+                                shutil.rmtree(file, ignore_errors=True)  # Delete directory
+                                sleep(1)
+                                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Deleted Logs directory: {file}\n")
+                                sf_dir = True
+
+                            elif os.path.isfile(file): # Check if object is file
+                                os.remove(file)  # Delete file
+                                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Deleted Log file: {file}\n")
+                                sf_file = True
+
+                        except PermissionError as e:
+                            print(f"{Fore.RED}[!] Permission denied: {file} - {e}{Style.RESET_ALL}\n")
+                else:
+                    return True
+            else:
+                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Not deleting log file..\n")
+                break
+
+        if not files_to_delete:
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} No files to delete!\n")
+            return False
+
+
     def dump_lsass(self):
         '''Downloads ProcDump and executes basic dump for lsass.exe'''
 
@@ -187,18 +231,34 @@ class EPScenario:
 
             if cleaned_success:
                     sleep(1)
-                    print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Cleaning done!\n")
+                    print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} ProcDump scenario cleanup done!\n")
             else:
                 print(f"{Fore.RED}[-]{Style.RESET_ALL} Cleaning files failed!\n")
 
 
     def _tools_setup(self):
+        '''Set up for tool downloads'''
+
         paths_ = list()
         os.makedirs(self.path + "mimikatz", exist_ok=True)
         os.makedirs(self.path + "Powersploit", exist_ok=True)
         paths_.append(os.path.join(f"{self.path}", "mimikatz"))
         paths_.append(os.path.join(f"{self.path}", "Powersploit"))
         return paths_
+
+
+    def _powersploit_exceptionH(self, err):
+        '''Handles exception if PowerSploit is removed before Security Solution detection'''
+
+        os.makedirs(self.path + "Logs", exist_ok=True)
+        log_dir = os.path.join(self.path, "Logs")
+        powersploitLogF = os.path.join(log_dir, "PowerSploit.log")    
+
+        with open(powersploitLogF, "w") as f:
+                f.write(str(err))
+                f.write("\nMost likely caught by the security solution!\n")
+
+        print(f"{Fore.LIGHTBLUE_EX}[*]{Style.RESET_ALL} See log file generated at {powersploitLogF}\n")
 
 
     def download_tools(self):
@@ -235,7 +295,9 @@ class EPScenario:
                 # Might need to run powerspoit in order for EDR to catch it
 
         except OSError as e:
-            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Powersploit was blocked by the security solution.\n")
+            print(f"{Fore.LIGHTBLUE_EX}[*]{Style.RESET_ALL} Powersploit was most likely blocked by the security solution.\n")
+            self._powersploit_exceptionH(e)
+            sleep(1)
 
         if self._cleaned_tools():
             print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Files were deleted successfully!\n")
@@ -244,10 +306,12 @@ class EPScenario:
     def web_filters(self):
         '''Open various restricted websites to check security solutions'''
 
+        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Opening URL blacklist:\n")
+
         chrome_path = r"C:/Program Files/Google/Chrome/Application/chrome.exe"
         webbrowser.register('chrome', None,  
                     webbrowser.BackgroundBrowser(chrome_path))
-        # For now the URL's will be hardcoded
+        # For now the URLs will be hardcoded
         urls = ["https://google.com","https://youtube.com","https://x.com","https://hackthebox.com","https://facebook.com"]
         
         for url in urls:

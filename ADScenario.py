@@ -16,7 +16,7 @@ class ADScenario:
         colorama_init()
     
     def _check_AD_module(self):
-        '''Check whether the ActiveDirectory Module is installed & installs if it isn't.'''
+        '''Checks whether the ActiveDirectory Module is installed & installs if it isn't.'''
 
         try:
             output = sp.check_output([self.PS,"-Command", "Get-Module -ListAvailable -Name ActiveDirectory"], text=True)
@@ -117,14 +117,3 @@ class ADScenario:
                 break
             else:
                 print(f"{Fore.RED}[!]{Style.RESET_ALL} Invalid input. Please enter 'y' or 'n'.\n")
-
-
-if __name__ == '__main__':
-
-    PS = os.path.expandvars(r"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe")
-
-    AD_obj = ADScenario(PS=PS)
-    
-    AD_obj.priv_esc()
-    AD_obj.create_scheduled_task()
-    AD_obj.delete_scheduled_task()

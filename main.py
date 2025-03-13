@@ -12,9 +12,9 @@ def main():
     colorama_init() # Initialize Colors
     
     try: # Check if executable is being run as an Administrator
-        if not includes.is_admin(): 
+        if not includes._is_admin(): 
             print(f"{Fore.RED}[!]{Style.RESET_ALL} Relaunching as {Fore.RED}Admin{Style.RESET_ALL}...\n")
-            includes.run_as_admin()
+            includes._run_as_admin()
 
         print(f"{Fore.LIGHTGREEN_EX}[*]{Style.RESET_ALL} Running with {Fore.RED}Administrator{Style.RESET_ALL} privileges...\n")
 
@@ -25,7 +25,7 @@ def main():
     # Declare Powershell absolute path:
     PS = includes.os.path.expandvars(r"%SystemRoot%\system32\WindowsPowerShell\v1.0\powershell.exe")
 
-    if includes.get_os():
+    if includes._get_os():
         AD_obj = ADScenario.ADScenario(PS=PS)
         AD_obj.priv_esc()
         AD_obj.create_scheduled_task()
@@ -33,11 +33,13 @@ def main():
         includes.sys.exit(0)
 
     else:
-        EP_obj = EPScenario.EPScenario(PS, includes.get_desktop_path)
+        EP_obj = EPScenario.EPScenario(PS, includes._get_desktop_path())
         EP_obj.make_Eicar()
         EP_obj.dump_lsass()
         EP_obj.download_tools()
         EP_obj.cs_alerts()
+        EP_obj.web_filters()
+        EP_obj.remove_logs()
         includes.sys.exit(0)
 
 
