@@ -20,4 +20,4 @@
 
 ##### Example:
 
-`python.exe -m PyInstaller --onefile --clean --name=[Final Executable Name] main.py`
+`python3.exe -m PyInstaller --onefile --clean --name=[Final Executable Name] main.py`
