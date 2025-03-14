@@ -1,4 +1,3 @@
-import os
 import subprocess as sp
 from time import sleep
 import re
@@ -45,7 +44,7 @@ class ADScenario:
         
         print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Confirming Domain: {domain}\n")
         sp.call(f'{self.PS} New-ADUser -Name "test987" -SamAccountName "test987" -UserPrincipalName "test987@{domain}" -AccountPassword (ConvertTo-SecureString "P@55w0rd!123123%" -AsPlainText -Force) -Enabled $true -PasswordNeverExpires $true', shell=True)
-        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Creating User 'test987'...\nDone...\n")
+        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Creating User 'test987'...\n\n{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Done...\n")
         
         sleep(2) # Sleep to remove output congestion
         
@@ -55,7 +54,7 @@ class ADScenario:
         print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Printing PoC info:\n")
         sp.call([self.PS, "-Command", "Get-ADUser -Identity test987 -Properties MemberOf"])
 
-        print("*** CLEANING UP ***\n\n")
+        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} CLEANING UP {Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL}\n")
         sp.call([self.PS, "-Command", "Remove-ADUser -Identity test987 -Confirm:$False"])
 
         # Check if user was successfully removed
@@ -72,7 +71,7 @@ class ADScenario:
         except sp.CalledProcessError as e:
             # This exception will catch non-zero exit status errors from subprocess because of non-zero exit code (User doesn't exist)
             if "Cannot find an object with identity" in e.output:
-                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL}DONE.\n{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} User Successfully removed.\n")
+                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL}DONE.\n\n{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} User Successfully removed.\n")
         except TypeError as e:
             print(f"{Fore.RED}[-]{Style.RESET_ALL} TypeError occured: {e}\nExiting!")
             sys.exit(1)
