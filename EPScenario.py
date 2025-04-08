@@ -7,6 +7,7 @@ from colorama import init as colorama_init
 from colorama import Fore
 from colorama import Style
 import webbrowser
+import time
 
 
 class EPScenario:
@@ -17,7 +18,18 @@ class EPScenario:
         self.mimikatz = r"https://github.com/ParrotSec/mimikatz/archive/refs/heads/master.zip"
         self.powerview = r"https://github.com/PowerShellMafia/PowerSploit/raw/refs/heads/master/Recon/PowerView.ps1"
         colorama_init() # Initialize colorset
-    
+        
+        # Ensure path exists and is writable
+        try:
+            os.makedirs(self.path, exist_ok=True)
+            # Test write permissions
+            test_file = os.path.join(self.path, "test.tmp")
+            with open(test_file, "w") as f:
+                f.write("test")
+            os.remove(test_file)
+        except Exception as e:
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Cannot write to {self.path}: {e}\n")
+            raise
 
     def make_Eicar(self):
         '''Generate EICAR file on user Desktop'''
@@ -25,36 +37,39 @@ class EPScenario:
         eicar_file = os.path.join(f"{self.path}", "EICAR.txt")
 
         try:
-
             with open(eicar_file, "w") as f:
                 f.write(r"X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
-            files = [os.path.join(self.path, f) for f in os.listdir(self.path) if "eicar" in f.lower()]
-
-            if files:
-                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} File created: EICAR.txt!\n")
-
-            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Looking for generated EICAR file.\n")
-            cleanDesktop = [os.path.join(self.path, f) for f in os.listdir(self.path) if "eicar" in f.lower()]
             
-            if not cleanDesktop:
-                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} No files to delete!\n")
-            else:
-                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Waiting 5 seconds for EICAR detection...\n")
-                sleep(5)
-                print(f"{Fore.RED}[-] EICAR FILE FOUND!\n\tDELETING.\n{Style.RESET_ALL}")
-                for file in cleanDesktop:
-                    if os.path.isfile(file):
-                        os.remove(file)
-                        sleep(2)
-                        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Desktop cleaned.\n")
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} File created: EICAR.txt!\n")
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Looking for generated EICAR file.\n")
+            
+            # Set a timeout for EICAR detection
+            max_wait_time = 30  # seconds
+            start_time = time.time()
+            
+            while True:
+                # Check if file still exists
+                if not os.path.exists(eicar_file):
+                    print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} EICAR file detected and removed by security solution!\n")
+                    break
+                    
+                # Check if we've exceeded the timeout
+                if time.time() - start_time > max_wait_time:
+                    print(f"{Fore.YELLOW}[!]{Style.RESET_ALL} EICAR detection timeout reached. Proceeding...\n")
+                    break
+                    
+                sleep(1)  # Check every second
+                
+            # Clean up if file still exists
+            if os.path.exists(eicar_file):
+                try:
+                    os.remove(eicar_file)
+                    print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Manually removed EICAR file.\n")
+                except Exception as e:
+                    print(f"{Fore.RED}[-]{Style.RESET_ALL} Failed to remove EICAR file: {e}\n")
 
-        except FileNotFoundError as e:
-            print(f"{Fore.RED}[-]{Style.RESET_ALL} Path not found.\n")
-            path = input(f"{Fore.RED}[*]{Style.RESET_ALL} Enter path manually:\n")
-            os.chdir(path=path)
-
-            with open(eicar_file, "w") as f:
-                f.write(r"X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
+        except Exception as e:
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Error creating EICAR file: {e}\n")
 
 
     def cs_alerts(self):
@@ -274,13 +289,62 @@ class EPScenario:
         paths = self._tools_setup()
 
         try:
-            sp.run([self.PS, "-Command", f"""Invoke-WebRequest {self.mimikatz} -OutFile {self.path}{mimikatz_zip}"""] ,shell=True, text=True)
-            sp.run([self.PS, "-Command",f"""Invoke-WebRequest {self.powersploit} -OutFile {self.path}{powersploit_zip}"""] ,shell=True, text=True)
+            # Use more robust PowerShell commands with proper error handling
+            download_cmd = f"""
+            $ErrorActionPreference = 'Stop'
+            try {{
+                # Check if we have write permissions
+                if (-not (Test-Path -Path '{self.path}' -PathType Container)) {{
+                    New-Item -Path '{self.path}' -ItemType Directory -Force
+                }}
+                
+                # Download with retry logic
+                $retryCount = 3
+                $retryDelay = 2
+                
+                function Download-File {{
+                    param($url, $output)
+                    $attempt = 1
+                    while ($attempt -le $retryCount) {{
+                        try {{
+                            Invoke-WebRequest -Uri $url -OutFile $output -UseBasicParsing
+                            return $true
+                        }} catch {{
+                            if ($attempt -eq $retryCount) {{ throw $_ }}
+                            Start-Sleep -Seconds $retryDelay
+                            $attempt++
+                        }}
+                    }}
+                }}
+                
+                Download-File -url '{self.mimikatz}' -output '{self.path}{mimikatz_zip}'
+                Download-File -url '{self.powersploit}' -output '{self.path}{powersploit_zip}'
+            }} catch {{
+                Write-Error $_.Exception.Message
+                exit 1
+            }}
+            """
+            sp.run([self.PS, "-Command", download_cmd], shell=True, text=True, check=True)
 
-        except PermissionError as e: # Ignore error output
-            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Downloading tools....\n")
-            sleep(3)
-            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Tools downloaded successfully!\n")
+        except sp.CalledProcessError as e:
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Failed to download tools: {e}\n")
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Command output: {e.output}\n")
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Command stderr: {e.stderr}\n")
+            return
+        except PermissionError as e:
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Access denied. Please ensure you have write permissions to: {self.path}\n")
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Try running the program as Administrator.\n")
+            return
+        except Exception as e:
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Unexpected error: {e}\n")
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Error type: {type(e).__name__}\n")
+            import traceback
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Full traceback:\n{traceback.format_exc()}\n")
+            return
+
+        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Downloading tools....\n")
+        sleep(3)
+        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Tools downloaded successfully!\n")
 
         
         mimikatz_zip_path = os.path.join(self.path, f"{mimikatz_zip}")
@@ -310,23 +374,48 @@ class EPScenario:
 
     def run_pv(self):
         '''Runs PowerView.ps1'''
-
-        pv_path = os.path.join(self.path, "PowerView.ps1")
-        print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Downloading PowerView.ps1 to {pv_path}...\n")
-        pv_script = None
-
         try:
-            sp.run([self.PS, "-ExecutionPolicy", "Bypass", "-NoProfile", "-Command", f"Invoke-WebRequest -Uri {self.powerview} -OutFile '{pv_path}'"], capture_output=True, text=True)
-            pv_script = pv_path.split("\\")[-1]
-            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Running {pv_script}\n")
-            sp.run([self.PS, "-ExecutionPolicy", "Bypass", "-NoProfile", "-Command", f"Import-Module '{self.path}.\\{pv_script}'"],shell=True,capture_output=True,text=True)
-        
-        except (PermissionError, UnboundLocalError) as e:
-            pv_script = pv_path.split("\\")[-1]
-            print(f"{Fore.RED}[-]{Style.RESET_ALL} Could not run {pv_script}\n")
-
-        if self._cleaned_tools():
-            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Files were deleted successfully!\n")
+            pv_path = os.path.join(self.path, "PowerView.ps1")
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Downloading PowerView.ps1 to {pv_path}...\n")
+            
+            download_cmd = f"""
+            $ErrorActionPreference = 'Stop'
+            try {{
+                Invoke-WebRequest -Uri '{self.powerview}' -OutFile '{pv_path}' -UseBasicParsing
+            }} catch {{
+                Write-Error $_.Exception.Message
+                exit 1
+            }}
+            """
+            
+            result = sp.run([self.PS, "-Command", download_cmd], shell=True, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                print(f"{Fore.RED}[-]{Style.RESET_ALL} Failed to download PowerView.ps1: {result.stderr}\n")
+                return
+                
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Running PowerView.ps1\n")
+            
+            run_cmd = f"""
+            $ErrorActionPreference = 'Stop'
+            try {{
+                Import-Module '{pv_path}'
+                Get-NetDomain
+            }} catch {{
+                Write-Error $_.Exception.Message
+                exit 1
+            }}
+            """
+            
+            result = sp.run([self.PS, "-Command", run_cmd], shell=True, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                print(f"{Fore.RED}[-]{Style.RESET_ALL} Failed to run PowerView.ps1: {result.stderr}\n")
+            else:
+                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} PowerView.ps1 executed successfully\n")
+                
+        except Exception as e:
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Error in run_pv: {e}\n")
 
 
     def web_filters(self):

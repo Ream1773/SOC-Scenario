@@ -102,17 +102,9 @@ class ADScenario:
 
 
     def delete_scheduled_task(self):
-        '''Deletes the scheduled task after user confirmation.'''
-
-        sleep(4)
-        while True:
-            choice = input(f"{Fore.RED}[-]{Style.RESET_ALL} Delete scheduled task? (y/n): \n").strip().lower() # Deletes the task according to user input
-            if choice.lower() == "y":
-                sp.run([self.PS, "-Command", f'Unregister-ScheduledTask -TaskName "{self.TASK_NAME}" -Confirm:$false'], capture_output=True, text=True)
-                print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Task deleted.\n")
-                break
-            elif choice.lower() == "n":
-                print(f"{Fore.RED}[-]{Style.RESET_ALL} Task not deleted.\n")
-                break
-            else:
-                print(f"{Fore.RED}[!]{Style.RESET_ALL} Invalid input. Please enter 'y' or 'n'.\n")
+        '''Deletes the scheduled task automatically.'''
+        try:
+            sp.run([self.PS, "-Command", f'Unregister-ScheduledTask -TaskName "{self.TASK_NAME}" -Confirm:$false'], capture_output=True, text=True)
+            print(f"{Fore.LIGHTGREEN_EX}[+]{Style.RESET_ALL} Scheduled task deleted.\n")
+        except Exception as e:
+            print(f"{Fore.RED}[-]{Style.RESET_ALL} Error deleting scheduled task: {e}\n")
